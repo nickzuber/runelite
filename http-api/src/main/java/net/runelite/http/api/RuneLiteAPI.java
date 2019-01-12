@@ -29,7 +29,10 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.Properties;
 import okhttp3.HttpUrl;
+import okhttp3.Interceptor;
 import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.Response;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -39,10 +42,10 @@ public class RuneLiteAPI
 
 	public static final String RUNELITE_AUTH = "RUNELITE-AUTH";
 
-	public static final OkHttpClient CLIENT = new OkHttpClient();
+	public static final OkHttpClient CLIENT;
 	public static final Gson GSON = new Gson();
 
-	private static final String BASE = "https://api.runelite.net/runelite-";
+	private static final String BASE = "https://api.runelite.net";
 	private static final String WSBASE = "wss://api.runelite.net/runelite-";
 	private static final String STATICBASE = "https://static.runelite.net";
 	private static final Properties properties = new Properties();
@@ -67,11 +70,33 @@ public class RuneLiteAPI
 		{
 			logger.error(null, ex);
 		}
+
+		CLIENT = new OkHttpClient.Builder()
+			.addNetworkInterceptor(new Interceptor()
+			{
+				private final String USER_AGENT = "RuneLite/" + version;
+
+				@Override
+				public Response intercept(Chain chain) throws IOException
+				{
+					Request userAgentRequest = chain.request()
+						.newBuilder()
+						.header("User-Agent", USER_AGENT)
+						.build();
+					return chain.proceed(userAgentRequest);
+				}
+			})
+			.build();
+	}
+
+	public static HttpUrl getApiRoot()
+	{
+		return HttpUrl.parse(BASE);
 	}
 
 	public static HttpUrl getApiBase()
 	{
-		return HttpUrl.parse(BASE + getVersion());
+		return HttpUrl.parse(BASE + "/runelite-" + getVersion());
 	}
 
 	public static HttpUrl getStaticBase()
