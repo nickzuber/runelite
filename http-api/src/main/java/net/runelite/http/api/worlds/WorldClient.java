@@ -26,20 +26,22 @@
 package net.runelite.http.api.worlds;
 
 import com.google.gson.JsonParseException;
-import net.runelite.http.api.RuneLiteAPI;
-import okhttp3.HttpUrl;
-import okhttp3.Request;
-import okhttp3.Response;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import net.runelite.http.api.RuneLiteAPI;
+import okhttp3.HttpUrl;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.Response;
 
+@Slf4j
+@RequiredArgsConstructor
 public class WorldClient
 {
-	private static final Logger logger = LoggerFactory.getLogger(WorldClient.class);
+	private final OkHttpClient client;
 
 	public WorldResult lookupWorlds() throws IOException
 	{
@@ -47,18 +49,18 @@ public class WorldClient
 			.addPathSegment("worlds.js")
 			.build();
 
-		logger.debug("Built URI: {}", url);
+		log.debug("Built URI: {}", url);
 
 		Request request = new Request.Builder()
 			.url(url)
 			.build();
 
-		try (Response response = RuneLiteAPI.CLIENT.newCall(request).execute())
+		try (Response response = client.newCall(request).execute())
 		{
 			if (!response.isSuccessful())
 			{
-				logger.debug("Error looking up worlds: {}", response.message());
-				return null;
+				log.debug("Error looking up worlds: {}", response);
+				throw new IOException("unsuccessful response looking up worlds");
 			}
 
 			InputStream in = response.body().byteStream();

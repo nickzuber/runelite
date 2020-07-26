@@ -38,10 +38,16 @@ import javax.inject.Inject;
 import javax.inject.Singleton;
 import lombok.AccessLevel;
 import lombok.Getter;
+import net.runelite.api.MenuAction;
+import net.runelite.api.events.MenuOptionClicked;
+import net.runelite.api.widgets.WidgetItem;
 import net.runelite.client.config.ConfigGroup;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.config.RuneLiteConfig;
+import net.runelite.client.eventbus.EventBus;
 import net.runelite.client.eventbus.Subscribe;
+import net.runelite.client.events.ConfigChanged;
+import net.runelite.client.events.OverlayMenuClicked;
 import net.runelite.client.events.PluginChanged;
 
 /**
@@ -50,6 +56,8 @@ import net.runelite.client.events.PluginChanged;
 @Singleton
 public class OverlayManager
 {
+	public static final String OPTION_CONFIGURE = "Configure";
+
 	private static final String OVERLAY_CONFIG_PREFERRED_LOCATION = "_preferredLocation";
 	private static final String OVERLAY_CONFIG_PREFERRED_POSITION = "_preferredPosition";
 	private static final String OVERLAY_CONFIG_PREFERRED_SIZE = "_preferredSize";
@@ -89,15 +97,32 @@ public class OverlayManager
 	 */
 	@Getter(AccessLevel.PACKAGE)
 	private final List<Overlay> overlays = new ArrayList<>();
+	@Getter
+	private final List<WidgetItem> itemWidgets = new ArrayList<>();
 
 	private final Map<OverlayLayer, List<Overlay>> overlayLayers = new EnumMap<>(OverlayLayer.class);
 
 	private final ConfigManager configManager;
+	private final EventBus eventBus;
+	private final RuneLiteConfig runeLiteConfig;
 
 	@Inject
-	private OverlayManager(final ConfigManager configManager)
+	private OverlayManager(final ConfigManager configManager, final EventBus eventBus, final RuneLiteConfig runeLiteConfig)
 	{
 		this.configManager = configManager;
+		this.eventBus = eventBus;
+		this.runeLiteConfig = runeLiteConfig;
+	}
+
+	@Subscribe
+	public void onConfigChanged(final ConfigChanged event)
+	{
+		if (!RuneLiteConfig.GROUP_NAME.equals(event.getGroup()) || !"overlayBackgroundColor".equals(event.getKey()))
+		{
+			return;
+		}
+
+		overlays.forEach(this::updateOverlayConfig);
 	}
 
 	@Subscribe
@@ -105,6 +130,32 @@ public class OverlayManager
 	{
 		overlays.forEach(this::loadOverlay);
 		rebuildOverlayLayers();
+	}
+
+	@Subscribe
+	public void onMenuOptionClicked(MenuOptionClicked event)
+	{
+		MenuAction menuAction = event.getMenuAction();
+		if (menuAction != MenuAction.RUNELITE_OVERLAY && menuAction != MenuAction.RUNELITE_OVERLAY_CONFIG)
+		{
+			return;
+		}
+
+		event.consume();
+
+		Overlay overlay = overlays.get(event.getId());
+		if (overlay != null)
+		{
+			List<OverlayMenuEntry> menuEntries = overlay.getMenuEntries();
+			OverlayMenuEntry overlayMenuEntry = menuEntries.stream()
+				.filter(me -> me.getOption().equals(event.getMenuOption()))
+				.findAny()
+				.orElse(null);
+			if (overlayMenuEntry != null)
+			{
+				eventBus.post(new OverlayMenuClicked(overlayMenuEntry, overlay));
+			}
+		}
 	}
 
 	/**
@@ -134,6 +185,15 @@ public class OverlayManager
 		// Add is always true
 		overlays.add(overlay);
 		loadOverlay(overlay);
+		updateOverlayConfig(overlay);
+
+		// WidgetItemOverlays have a reference to the overlay manager in order to get the WidgetItems
+		// for each frame.
+		if (overlay instanceof WidgetItemOverlay)
+		{
+			((WidgetItemOverlay) overlay).setOverlayManager(this);
+		}
+
 		rebuildOverlayLayers();
 		return true;
 	}
@@ -175,6 +235,17 @@ public class OverlayManager
 	}
 
 	/**
+	 * Returns whether an overlay exists which matches the given predicate.
+	 *
+	 * @param filter Filter predicate function
+	 * @return {@code true} if any overlays match the given filter, {@code false} otherwise
+	 */
+	public synchronized boolean anyMatch(Predicate<Overlay> filter)
+	{
+		return overlays.stream().anyMatch(filter);
+	}
+
+	/**
 	 * Clear all overlays
 	 */
 	public synchronized void clear()
@@ -209,7 +280,7 @@ public class OverlayManager
 		saveOverlay(overlay);
 	}
 
-	private synchronized void rebuildOverlayLayers()
+	synchronized void rebuildOverlayLayers()
 	{
 		for (OverlayLayer l : OverlayLayer.values())
 		{
@@ -248,6 +319,15 @@ public class OverlayManager
 		overlay.setPreferredSize(size);
 		final OverlayPosition position = loadOverlayPosition(overlay);
 		overlay.setPreferredPosition(position);
+	}
+
+	private void updateOverlayConfig(final Overlay overlay)
+	{
+		if (overlay instanceof OverlayPanel)
+		{
+			// Update preferred color for overlay panels based on configuration
+			((OverlayPanel) overlay).setPreferredColor(runeLiteConfig.overlayBackgroundColor());
+		}
 	}
 
 	private void saveOverlayLocation(final Overlay overlay)

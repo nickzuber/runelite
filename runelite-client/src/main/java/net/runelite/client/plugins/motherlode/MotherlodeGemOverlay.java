@@ -29,30 +29,35 @@ import java.awt.Graphics2D;
 import java.time.Duration;
 import java.time.Instant;
 import javax.inject.Inject;
-import net.runelite.client.ui.overlay.Overlay;
+import static net.runelite.api.MenuAction.RUNELITE_OVERLAY_CONFIG;
+import static net.runelite.client.ui.overlay.OverlayManager.OPTION_CONFIGURE;
+import net.runelite.client.ui.overlay.OverlayMenuEntry;
+import net.runelite.client.ui.overlay.OverlayPanel;
 import net.runelite.client.ui.overlay.OverlayPosition;
 import net.runelite.client.ui.overlay.components.LineComponent;
-import net.runelite.client.ui.overlay.components.PanelComponent;
 import net.runelite.client.ui.overlay.components.TitleComponent;
 
-public class MotherlodeGemOverlay extends Overlay
+public class MotherlodeGemOverlay extends OverlayPanel
 {
 	private final MotherlodePlugin plugin;
+	private final MotherlodeSession motherlodeSession;
 	private final MotherlodeConfig config;
-	private final PanelComponent panelComponent = new PanelComponent();
 
 	@Inject
-	MotherlodeGemOverlay(MotherlodePlugin plugin, MotherlodeConfig config)
+	MotherlodeGemOverlay(MotherlodePlugin plugin, MotherlodeSession motherlodeSession, MotherlodeConfig config)
 	{
+		super(plugin);
 		setPosition(OverlayPosition.TOP_LEFT);
 		this.plugin = plugin;
+		this.motherlodeSession = motherlodeSession;
 		this.config = config;
+		getMenuEntries().add(new OverlayMenuEntry(RUNELITE_OVERLAY_CONFIG, OPTION_CONFIGURE, "Gem overlay"));
 	}
 
 	@Override
 	public Dimension render(Graphics2D graphics)
 	{
-		MotherlodeSession session = plugin.getSession();
+		MotherlodeSession session = motherlodeSession;
 
 		if (session.getLastGemFound() == null || !plugin.isInMlm() || !config.showGemsFound())
 		{
@@ -72,7 +77,6 @@ public class MotherlodeGemOverlay extends Overlay
 		int emeraldsFound = session.getEmeraldsFound();
 		int sapphiresFound = session.getSapphiresFound();
 
-		panelComponent.getChildren().clear();
 		panelComponent.getChildren().add(TitleComponent.builder().text("Gems found").build());
 
 		if (diamondsFound > 0)
@@ -107,6 +111,6 @@ public class MotherlodeGemOverlay extends Overlay
 				.build());
 		}
 
-		return panelComponent.render(graphics);
+		return super.render(graphics);
 	}
 }

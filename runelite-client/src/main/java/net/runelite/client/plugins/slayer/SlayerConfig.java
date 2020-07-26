@@ -29,6 +29,7 @@ import java.awt.Color;
 import net.runelite.client.config.Config;
 import net.runelite.client.config.ConfigGroup;
 import net.runelite.client.config.ConfigItem;
+import net.runelite.client.config.Units;
 
 @ConfigGroup("slayer")
 public interface SlayerConfig extends Config
@@ -69,9 +70,10 @@ public interface SlayerConfig extends Config
 	@ConfigItem(
 		position = 4,
 		keyName = "statTimeout",
-		name = "InfoBox Expiry (minutes)",
+		name = "InfoBox Expiry",
 		description = "Set the time until the InfoBox expires"
 	)
+	@Units(Units.MINUTES)
 	default int statTimeout()
 	{
 		return 5;
@@ -110,6 +112,17 @@ public interface SlayerConfig extends Config
 		return true;
 	}
 
+	@ConfigItem(
+		position = 8,
+		keyName = "taskCommand",
+		name = "Task Command",
+		description = "Configures whether the slayer task command is enabled<br> !task"
+	)
+	default boolean taskCommand()
+	{
+		return true;
+	}
+
 	// Stored data
 	@ConfigItem(
 		keyName = "taskName",
@@ -141,6 +154,13 @@ public interface SlayerConfig extends Config
 	}
 
 	@ConfigItem(
+		keyName = "amount",
+		name = "",
+		description = ""
+	)
+	void amount(int amt);
+
+	@ConfigItem(
 		keyName = "initialAmount",
 		name = "",
 		description = "",
@@ -158,11 +178,22 @@ public interface SlayerConfig extends Config
 	void initialAmount(int initialAmount);
 
 	@ConfigItem(
-		keyName = "amount",
+		keyName = "taskLocation",
+		name = "",
+		description = "",
+		hidden = true
+	)
+	default String taskLocation()
+	{
+		return "";
+	}
+
+	@ConfigItem(
+		keyName = "taskLocation",
 		name = "",
 		description = ""
 	)
-	void amount(int amt);
+	void taskLocation(String key);
 
 	@ConfigItem(
 		keyName = "streak",

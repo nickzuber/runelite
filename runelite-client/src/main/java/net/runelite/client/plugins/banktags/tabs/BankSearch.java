@@ -25,7 +25,8 @@
 
 package net.runelite.client.plugins.banktags.tabs;
 
-import com.google.inject.Inject;
+import javax.inject.Inject;
+import javax.inject.Singleton;
 import net.runelite.api.Client;
 import net.runelite.api.ScriptID;
 import net.runelite.api.VarClientInt;
@@ -35,22 +36,9 @@ import net.runelite.api.widgets.Widget;
 import net.runelite.api.widgets.WidgetInfo;
 import net.runelite.client.callback.ClientThread;
 
+@Singleton
 public class BankSearch
 {
-	// Widget indexes for searching
-	private static final int INNER_CONTAINER_IDX = 2;
-	private static final int SETTINGS_IDX = 4;
-	private static final int ITEM_CONTAINER_IDX = 7;
-	private static final int SCROLLBAR_IDX = 8;
-	private static final int BOTTOM_BAR_IDX = 9;
-	private static final int SEARCH_BUTTON_BACKGROUND_IDX = 15;
-	private static final int TITLE_BAR_IDX = 16;
-	private static final int ITEM_COUNT_IDX = 17;
-	private static final int TAB_BAR_IDX = 18;
-	private static final int INCINERATOR_IDX = 19;
-	private static final int INCINERATOR_CONFIRM_IDX = 20;
-	private static final int HIDDEN_WIDGET_IDX = 21;
-
 	private final Client client;
 	private final ClientThread clientThread;
 
@@ -64,52 +52,41 @@ public class BankSearch
 		this.clientThread = clientThread;
 	}
 
-	public void search(InputType inputType, String search, Boolean closeInput)
+	public void layoutBank()
+	{
+		Widget bankContainer = client.getWidget(WidgetInfo.BANK_ITEM_CONTAINER);
+		if (bankContainer == null || bankContainer.isHidden())
+		{
+			return;
+		}
+
+		Object[] scriptArgs = bankContainer.getOnInvTransmitListener();
+		if (scriptArgs == null)
+		{
+			return;
+		}
+
+		client.runScript(scriptArgs);
+	}
+
+	public void reset(boolean closeChat)
 	{
 		clientThread.invoke(() ->
 		{
-			Widget bankContainer = client.getWidget(WidgetInfo.BANK_CONTAINER);
-			if (bankContainer == null || bankContainer.isHidden())
-			{
-				return;
-			}
-
-			Object[] widgetIds = bankContainer.getOnLoadListener();
-
-			// In case the widget ids array is incorrect, do not proceed
-			if (widgetIds == null || widgetIds.length < 21)
-			{
-				return;
-			}
 			// This ensures that any chatbox input (e.g from search) will not remain visible when
 			// selecting/changing tab
-			if (closeInput)
+			if (closeChat)
 			{
-				client.runScript(ScriptID.RESET_CHATBOX_INPUT);
+				// this clears the input text and type, and resets the chatbox to allow input
+				client.runScript(ScriptID.MESSAGE_LAYER_CLOSE, 1, 1);
+			}
+			else
+			{
+				client.setVar(VarClientInt.INPUT_TYPE, InputType.NONE.getType());
+				client.setVar(VarClientStr.INPUT_TEXT, "");
 			}
 
-			client.setVar(VarClientInt.INPUT_TYPE, inputType.getType());
-			client.setVar(VarClientStr.INPUT_TEXT, search);
-
-			client.runScript(ScriptID.BANK_LAYOUT,
-				WidgetInfo.BANK_CONTAINER.getId(),
-				widgetIds[INNER_CONTAINER_IDX],
-				widgetIds[SETTINGS_IDX],
-				widgetIds[ITEM_CONTAINER_IDX],
-				widgetIds[SCROLLBAR_IDX],
-				widgetIds[BOTTOM_BAR_IDX],
-				widgetIds[TITLE_BAR_IDX],
-				widgetIds[ITEM_COUNT_IDX],
-				widgetIds[SEARCH_BUTTON_BACKGROUND_IDX],
-				widgetIds[TAB_BAR_IDX],
-				widgetIds[INCINERATOR_IDX],
-				widgetIds[INCINERATOR_CONFIRM_IDX],
-				widgetIds[HIDDEN_WIDGET_IDX]);
+			layoutBank();
 		});
-	}
-
-	public void reset(Boolean closeChat)
-	{
-		search(InputType.NONE, "", closeChat);
 	}
 }

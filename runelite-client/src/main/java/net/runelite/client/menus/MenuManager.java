@@ -24,6 +24,7 @@
  */
 package net.runelite.client.menus;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
@@ -33,13 +34,14 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.regex.Pattern;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.Client;
+import net.runelite.api.IconID;
 import net.runelite.api.MenuAction;
 import net.runelite.api.MenuEntry;
-import net.runelite.api.NPC;
 import net.runelite.api.NPCComposition;
 import net.runelite.api.events.MenuEntryAdded;
 import net.runelite.api.events.MenuOptionClicked;
@@ -62,6 +64,8 @@ public class MenuManager
 	private static final int IDX_LOWER = 4;
 	private static final int IDX_UPPER = 8;
 
+	private static final Pattern BOUNTY_EMBLEM_TAG_AND_TIER_REGEXP = Pattern.compile(String.format("%s[1-9]0?", IconID.BOUNTY_HUNTER_EMBLEM.toString()));
+
 	private final Client client;
 	private final EventBus eventBus;
 
@@ -72,34 +76,11 @@ public class MenuManager
 	private final Set<String> npcMenuOptions = new HashSet<>();
 
 	@Inject
-	private MenuManager(Client client, EventBus eventBus)
+	@VisibleForTesting
+	MenuManager(Client client, EventBus eventBus)
 	{
 		this.client = client;
 		this.eventBus = eventBus;
-	}
-
-	public void addNpcMenuOption(String option)
-	{
-		npcMenuOptions.add(option);
-
-		// add to surrounding npcs
-		for (NPC npc : client.getNpcs())
-		{
-			NPCComposition composition = npc.getComposition();
-			addNpcOption(composition, option);
-		}
-	}
-
-	public void removeNpcMenuOption(String option)
-	{
-		npcMenuOptions.remove(option);
-
-		// remove this option from all npc compositions
-		for (NPC npc : client.getNpcs())
-		{
-			NPCComposition composition = npc.getComposition();
-			removeNpcOption(composition, option);
-		}
 	}
 
 	/**
@@ -142,6 +123,11 @@ public class MenuManager
 	@Subscribe
 	public void onMenuEntryAdded(MenuEntryAdded event)
 	{
+		if (client.getSpellSelected())
+		{
+			return;
+		}
+
 		int widgetId = event.getActionParam1();
 		Collection<WidgetMenuOption> options = managedMenuOptions.get(widgetId);
 
@@ -267,9 +253,10 @@ public class MenuManager
 	@Subscribe
 	public void onMenuOptionClicked(MenuOptionClicked event)
 	{
-		if (event.getMenuAction() != MenuAction.RUNELITE)
+		if (event.getMenuAction() != MenuAction.RUNELITE
+			&& event.getMenuAction() != MenuAction.RUNELITE_PLAYER)
 		{
-			return; // not a player menu
+			return; // not a managed widget option or custom player option
 		}
 
 		int widgetId = event.getWidgetId();
@@ -289,7 +276,9 @@ public class MenuManager
 			}
 		}
 
-		String target = event.getMenuTarget();
+		// removes bounty hunter emblem tag and tier from player name, e.g:
+		// "username<img=20>5<col=40ff00>  (level-42)" -> "username<col=40ff00>  (level-42)"
+		String target = BOUNTY_EMBLEM_TAG_AND_TIER_REGEXP.matcher(event.getMenuTarget()).replaceAll("");
 
 		// removes tags and level from player names for example:
 		// <col=ffffff>username<col=40ff00>  (level-42) or <col=ffffff><img=2>username</col>
@@ -306,7 +295,7 @@ public class MenuManager
 	{
 		client.getPlayerOptions()[playerOptionIndex] = menuText;
 		client.getPlayerOptionsPriorities()[playerOptionIndex] = true;
-		client.getPlayerMenuTypes()[playerOptionIndex] = MenuAction.RUNELITE.getId();
+		client.getPlayerMenuTypes()[playerOptionIndex] = MenuAction.RUNELITE_PLAYER.getId();
 
 		playerMenuIndexMap.put(playerOptionIndex, menuText);
 	}

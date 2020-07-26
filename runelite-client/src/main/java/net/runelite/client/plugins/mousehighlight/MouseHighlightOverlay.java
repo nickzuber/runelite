@@ -29,9 +29,11 @@ import java.awt.Dimension;
 import java.awt.Graphics2D;
 import javax.inject.Inject;
 import net.runelite.api.Client;
+import net.runelite.api.MenuAction;
 import net.runelite.api.MenuEntry;
 import net.runelite.api.VarClientInt;
 import net.runelite.api.widgets.Widget;
+import net.runelite.api.widgets.WidgetID;
 import net.runelite.api.widgets.WidgetInfo;
 import net.runelite.client.ui.overlay.Overlay;
 import net.runelite.client.ui.overlay.OverlayPosition;
@@ -72,6 +74,13 @@ class MouseHighlightOverlay extends Overlay
 		MenuEntry menuEntry = menuEntries[last];
 		String target = menuEntry.getTarget();
 		String option = menuEntry.getOption();
+		int type = menuEntry.getType();
+
+		if (type == MenuAction.RUNELITE_OVERLAY.getId() || type == MenuAction.CC_OP_LOW_PRIORITY.getId())
+		{
+			// These are always right click only
+			return null;
+		}
 
 		if (Strings.isNullOrEmpty(option))
 		{
@@ -104,6 +113,11 @@ class MouseHighlightOverlay extends Overlay
 		}
 
 		if (!config.chatboxTooltip() && groupId == WidgetInfo.CHATBOX.getGroupId())
+		{
+			return null;
+		}
+
+		if (config.disableSpellbooktooltip() && groupId == WidgetID.SPELLBOOK_GROUP_ID)
 		{
 			return null;
 		}
