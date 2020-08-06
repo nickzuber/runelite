@@ -33,10 +33,114 @@ import net.runelite.client.config.Keybind;
 @ConfigGroup("modme")
 public interface ModMeConfig extends Config
 {
-//	@ConfigItem(
-//			keyName = "notesData",
-//			name = "",
-//			description = ""
-//	)
-//	void notesData(String str);
+    @ConfigItem(
+            position = 0,
+            keyName = "gamemode",
+            name = "Game mode",
+            description = "The game mode to pretend to be."
+    )
+    default GameMode getGameMode() {
+        return GameMode.JAGEX_MODERATOR;
+    }
+
+    @ConfigItem(
+            position = 1,
+            keyName = "fakename",
+            name = "Name Change",
+            description = "Change your display name."
+    )
+    default String getFauxName() {
+        return "";
+    }
+
+    // Customer gear overrides
+    @ConfigItem(
+            position = 2,
+            keyName = "head",
+            name = "Head",
+            description = "Change your helmet."
+    )
+    default int getHeadID() {
+        return 0;
+    }
+
+    @ConfigItem(
+            position = 3,
+            keyName = "amulet",
+            name = "Amulet",
+            description = "Change your amulet."
+    )
+    default int getAmuletID() {
+        return 0;
+    }
+
+    @ConfigItem(
+            position = 4,
+            keyName = "torso",
+            name = "Torso",
+            description = "Change your torso."
+    )
+    default int getTorsoID() {
+        return 0;
+    }
+
+    @ConfigItem(
+            position = 5,
+            keyName = "legs",
+            name = "Legs",
+            description = "Change your legs."
+    )
+    default int getLegsID() {
+        return 0;
+    }
+
+    @ConfigItem(
+            position = 7,
+            keyName = "gloves",
+            name = "Gloves",
+            description = "Change your gloves."
+    )
+    default int getGlovesID() {
+        return 0;
+    }
+
+    @ConfigItem(
+            position = 6,
+            keyName = "boots",
+            name = "Boots",
+            description = "Change your boots."
+    )
+    default int getBootsID() {
+        return 0;
+    }
+
+    @ConfigItem(
+            position = 8,
+            keyName = "shield",
+            name = "Shield",
+            description = "Change your shield."
+    )
+    default int getShieldID() {
+        return 0;
+    }
+
+    @ConfigItem(
+            position = 9,
+            keyName = "weapon",
+            name = "Weapon",
+            description = "Change your weapon."
+    )
+    default int getWeaponID() {
+        return 0;
+    }
+
+    @ConfigItem(
+            position = 10,
+            keyName = "cape",
+            name = "Cape",
+            description = "Change your cape."
+    )
+    default int getCapeID() {
+        return 0;
+    }
 }
